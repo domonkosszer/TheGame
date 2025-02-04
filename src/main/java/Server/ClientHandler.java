@@ -3,6 +3,8 @@ package Server;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class ClientHandler implements Runnable {
@@ -16,7 +18,6 @@ public class ClientHandler implements Runnable {
     public ClientHandler(Socket socket) {
         try {
             this.socket = socket;
-
             this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.username = in.readLine();
@@ -24,7 +25,7 @@ public class ClientHandler implements Runnable {
             clientHandlers.add(this);
             broadcastSystemMessage(username + " has entered the chat.");
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            closeEverything(socket, in, out);
         }
     }
 
@@ -35,7 +36,54 @@ public class ClientHandler implements Runnable {
         while (socket.isConnected()) {
             try {
                 messageFromClient = in.readLine();
+                if (messageFromClient == null) {
+                    break;
+                }
                 processMessage(messageFromClient);
+            } catch (IOException e) {
+                break;
+            }
+        }
+        closeEverything(socket, in, out);
+    }
+
+    private void processMessage(String messageIn) {
+        try {
+            JSONObject jsonMessage = new JSONObject(messageIn);
+            String type = jsonMessage.getString("type");
+
+            switch (type) {
+                case "group":
+                    broadcastMessage(jsonMessage);
+                    break;
+                case "private":
+                    sendPrivateMessage(jsonMessage);
+                    break;
+                case "system":
+                    broadcastMessage(jsonMessage);
+                    break;
+                default:
+                    System.out.println("Unknown message type: " + type);
+                    break;
+            }
+
+        } catch (JSONException e) {
+            System.err.println("Invalid JSON format received: " + messageIn);
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("An unexpected error occurred during message processing: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public void broadcastMessage(JSONObject message) {
+        for (ClientHandler clientHandler : clientHandlers) {
+            try {
+                if (!clientHandler.username.equals(username)) {
+                    clientHandler.out.write(message.toString());
+                    clientHandler.out.newLine();
+                    clientHandler.out.flush();
+                }
             } catch (IOException e) {
                 closeEverything(socket, in, out);
                 break;
@@ -43,60 +91,55 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void processMessage(String messageIn){
-        try {
-            JSONObject jsonMessage = new JSONObject(messageIn);
-            String type = jsonMessage.getString("type");
-            String sender = jsonMessage.getString("sender");
-            String content = jsonMessage.getString("content");
+    private void sendPrivateMessage(JSONObject message) {
+        String receiver = message.getString("receiver");
+        String sender = message.getString("sender");
 
-            if (type.equals("group")){
-                broadcastMessage(sender + ": " + content);
-            } else if (type.equals("private")) {
-                String receiver = jsonMessage.getString("receiver");
-                sendPrivateMessage(sender, receiver, content);
-            }
-        } catch (Exception e) {
-            System.out.println("Invalid message format recieved!");
-        }
-    }
-
-    public void broadcastMessage(String message) {
         for (ClientHandler clientHandler : clientHandlers) {
-            try {
-                if (!clientHandler.username.equals(username)) {
-                    clientHandler.out.write(message);
-                    clientHandler.out.newLine();
-                    clientHandler.out.flush();
-                }
-            } catch (IOException e) {
-                closeEverything(socket, in, out);
-            }
-        }
-    }
-
-    private void sendPrivateMessage(String sender, String receiver, String message) {
-        for (ClientHandler clientHandler: clientHandlers){
-            if(clientHandler.username.equals(receiver)){
+            if (clientHandler.username.equals(receiver) && !clientHandler.username.equals(sender)) {
                 try {
-                    clientHandler.out.write("[PRIVATE] " + sender + ": " + message);
+                    clientHandler.out.write(message.toString());
                     clientHandler.out.newLine();
                     clientHandler.out.flush();
+                    return;
                 } catch (IOException e) {
                     closeEverything(socket, in, out);
+                    break;
+                }
+            }
+        }
+
+        for (ClientHandler clientHandler : clientHandlers) {
+            if (clientHandler.username.equals(sender)) {
+                try {
+                    JSONObject notFoundMessage = new JSONObject();
+                    notFoundMessage.put("type", "system");
+                    notFoundMessage.put("content", receiver + " is not online.");
+                    clientHandler.out.write(notFoundMessage.toString());
+                    clientHandler.out.newLine();
+                    clientHandler.out.flush();
+                    break;
+                } catch (IOException e) {
+                    closeEverything(socket, in, out);
+                    break;
                 }
             }
         }
     }
 
     private void broadcastSystemMessage(String message) {
-        for (ClientHandler clientHandler: clientHandlers) {
+        JSONObject jsonMessage = new JSONObject();
+        jsonMessage.put("type", "system");
+        jsonMessage.put("content", message);
+
+        for (ClientHandler clientHandler : clientHandlers) {
             try {
-                clientHandler.out.write("[SYSTEM]: " + message);
+                clientHandler.out.write(jsonMessage.toString());
                 clientHandler.out.newLine();
                 clientHandler.out.flush();
             } catch (IOException e) {
                 closeEverything(socket, in, out);
+                break; // Exit loop if a client disconnects
             }
         }
     }
@@ -107,17 +150,12 @@ public class ClientHandler implements Runnable {
     }
 
     public void closeEverything(Socket socket, BufferedReader in, BufferedWriter out) {
+        if (socket == null || in == null || out == null) return;
         removeClient();
         try {
-            if (in != null) {
-                in.close();
-            }
-            if (out != null) {
-                out.close();
-            }
-            if(socket != null) {
-                socket.close();
-            }
+            in.close();
+            out.close();
+            socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
