@@ -3,6 +3,7 @@ package Server;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import org.json.JSONObject;
 
 public class ClientHandler implements Runnable {
 
@@ -19,6 +20,7 @@ public class ClientHandler implements Runnable {
             this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.username = in.readLine();
+
             clientHandlers.add(this);
             broadcastMessage("Server: " + username + " has entered the Chat");
 
@@ -42,6 +44,24 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    private void processMessage(String messageIn){
+        try {
+            JSONObject jsonMessage = new JSONObject(messageIn);
+            String type = jsonMessage.getString("type");
+            String sender = jsonMessage.getString("sender");
+            String content = jsonMessage.getString("content");
+
+            if (type.equals("group")){
+                broadcastMessage(sender + ": " + content);
+            } else if (type.equals("private")) {
+                String receiver = jsonMessage.getString("receiver");
+                sendPrivateMessage(sender, receiver, content);
+            }
+        } catch (Exception e) {
+            System.out.println("Invalid message format recieved!");
+        }
+    }
+
     public void broadcastMessage(String message) {
         for (ClientHandler clientHandler : clientHandlers) {
             try {
@@ -50,6 +70,32 @@ public class ClientHandler implements Runnable {
                     clientHandler.out.newLine();
                     clientHandler.out.flush();
                 }
+            } catch (IOException e) {
+                closeEverything(socket, in, out);
+            }
+        }
+    }
+
+    private void sendPrivateMessage(String sender, String receiver, String message) {
+        for (ClientHandler clientHandler: clientHandlers){
+            if(clientHandler.username.equals(receiver)){
+                try {
+                    clientHandler.out.write("[PRIVATE] " + sender + ": " + message);
+                    clientHandler.out.newLine();
+                    clientHandler.out.flush();
+                } catch (IOException e) {
+                    closeEverything(socket, in, out);
+                }
+            }
+        }
+    }
+
+    private void broadcastSystemMessage(String message) {
+        for (ClientHandler clientHandler: clientHandlers) {
+            try {
+                clientHandler.out.write("[SYSTEM]: " + message);
+                clientHandler.out.newLine();
+                clientHandler.out.flush();
             } catch (IOException e) {
                 closeEverything(socket, in, out);
             }

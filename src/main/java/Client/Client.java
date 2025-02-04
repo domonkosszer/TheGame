@@ -31,10 +31,21 @@ public class Client {
 
             Scanner scanner = new Scanner(System.in);
             while (socket.isConnected()) {
-                String message = scanner.nextLine();
-                out.write(username + ": " + message);
-                out.newLine();
-                out.flush();
+                String messsage = scanner.nextLine();
+
+                JSONObject jsonMessage = new JSONObject();
+                if(messsage.startsWith("/pm")){
+                    String[] parts = messsage.split(" ", 3);
+                    if(parts.length < 3) {
+                        System.out.println("Invalid private message, use /pm");
+                    }
+                    jsonMessage.put("type", "private");
+                    jsonMessage.put("receiver", parts[1]);
+                    jsonMessage.put("content", parts[2]);
+                } else {
+                    jsonMessage.put("type", "group");
+                    jsonMessage.put("content", messsage);
+                }
             }
         } catch (IOException e) {
             closeEverything(socket, in, out);
@@ -43,7 +54,6 @@ public class Client {
 
     public void listenForMessage() {
         new Thread(new Runnable() {
-
             @Override
             public void run() {
                 String groupChatMessage;
