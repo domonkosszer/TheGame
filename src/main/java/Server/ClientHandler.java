@@ -28,6 +28,8 @@ public class ClientHandler implements Runnable {
             this.username =  handleUsernameSelection();
             clientHandlers.add(this);
             broadcastSystemMessage(username + " has entered the chat");
+
+            startPingCheckScheduler();
         } catch (IOException e) {
             closeEverything(socket, in, out);
         }
