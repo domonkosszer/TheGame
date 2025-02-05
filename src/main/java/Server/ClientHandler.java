@@ -25,13 +25,38 @@ public class ClientHandler implements Runnable {
             this.socket = socket;
             this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            this.username = in.readLine();
+            this.username =  handleUsernameSelection();
             clientHandlers.add(this);
-            broadcastSystemMessage(username + " has entered the chat.");
-            startPingCheckScheduler();
+            broadcastSystemMessage(username + " has entered the chat");
         } catch (IOException e) {
             closeEverything(socket, in, out);
         }
+    }
+
+    public String handleUsernameSelection() throws IOException {
+        String tempUsername;
+        while (true) {
+            tempUsername = in.readLine();
+            if (isUsernameTaken(tempUsername)) {
+                out.write(tempUsername + " is already taken. Please try another username...");
+                out.newLine();
+                out.flush();
+            } else {
+                out.write("USERNAME_ACCEPTED");
+                out.newLine();
+                out.flush();
+                break;
+            }
+        }
+        return tempUsername;
+    }
+
+    private boolean isUsernameTaken(String username) {
+        return clientHandlers.stream().anyMatch(handler -> handler.getUsername().equalsIgnoreCase(username));
+    }
+
+    public String getUsername() {
+        return username;
     }
 
     @Override
