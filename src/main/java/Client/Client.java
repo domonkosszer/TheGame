@@ -16,19 +16,36 @@ public class Client {
     private String username;
     private ScheduledExecutorService pingScheduler;
 
-    public Client(Socket socket, String username) {
+    public Client(Socket socket) {
         try {
             this.socket = socket;
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            this.username = username;
+            this.username = selectUsername();
             startPingScheduler();
-            out.write(username);
-            out.newLine();
-            out.flush();
         } catch (IOException e) {
             closeEverything(socket, in, out);
         }
+    }
+
+    private String selectUsername() throws IOException {
+        String selectedUsername;
+        while (true) {
+            System.out.println("Please enter your username: ");
+            selectedUsername = new Scanner(System.in).nextLine();
+            out.write(selectedUsername);
+            out.newLine();
+            out.flush();
+
+            String response = in.readLine();
+            if (response.equals("USERNAME_ACCEPTED")) {
+                System.out.println("Your username has been accepted.");
+                break;
+            } else {
+                System.out.println(response);
+            }
+        }
+        return selectedUsername;
     }
 
     public void startPingScheduler() {
@@ -154,12 +171,10 @@ public class Client {
     }
 
     public static void main(String[] args) throws IOException {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Please enter your username: ");
-        String username = scanner.nextLine();
+
         try {
             Socket socket = new Socket("localhost", 2222);
-            Client client = new Client(socket, username);
+            Client client = new Client(socket);
             client.listenForMessage();
             client.sendMessage();
         } catch (IOException e) {
