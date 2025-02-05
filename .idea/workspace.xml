@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f44cd8e2-ea9f-4f22-af20-dce05e88230b" name="Changes" comment="Ping Pong implemented, to Client and ClientHandler.java&#10;Debugged some stuff, like double exit message.">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Client/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Client/Client.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Server/ClientHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Server/ClientHandler.java" afterDir="false" />
-    </list>
+    <list default="true" id="f44cd8e2-ea9f-4f22-af20-dce05e88230b" name="Changes" comment="Added Ping latency check" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -179,7 +175,7 @@
       <workItem from="1738686216071" duration="914000" />
       <workItem from="1738690166591" duration="16000" />
       <workItem from="1738690195780" duration="3619000" />
-      <workItem from="1738749066130" duration="4458000" />
+      <workItem from="1738749066130" duration="5904000" />
     </task>
     <task id="LOCAL-00001" summary="Updated ClientHandler.java&#10;&#10;processMessage works&#10;broadcastSystemMessage works as well">
       <option name="closed" value="true" />
@@ -213,7 +209,23 @@
       <option name="project" value="LOCAL" />
       <updated>1738753156925</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Ping latency check, throws mandem out the server if woodconnection.&#10;&#10;Cleaned up the code.">
+      <option name="closed" value="true" />
+      <created>1738753984707</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1738753984707</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Added Ping latency check">
+      <option name="closed" value="true" />
+      <created>1738754417099</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1738754417099</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -234,7 +246,9 @@
     <MESSAGE value="Updated ClientHandler.java&#10;&#10;processMessage works&#10;broadcastSystemMessage works as well" />
     <MESSAGE value="changed, the JDK to JDK21 Oracle. Didnt work with the other one. &#10;&#10;built the /pm so it works, added some features like /quit and a &gt;." />
     <MESSAGE value="Ping Pong implemented, to Client and ClientHandler.java&#10;Debugged some stuff, like double exit message." />
-    <option name="LAST_COMMIT_MESSAGE" value="Ping Pong implemented, to Client and ClientHandler.java&#10;Debugged some stuff, like double exit message." />
+    <MESSAGE value="Ping latency check, throws mandem out the server if woodconnection.&#10;&#10;Cleaned up the code." />
+    <MESSAGE value="Added Ping latency check" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added Ping latency check" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
