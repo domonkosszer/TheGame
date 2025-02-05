@@ -87,7 +87,10 @@ public class ClientHandler implements Runnable {
         pongMessage.put("sender", username);
         pongMessage.put("receiver", sender);
         sendPrivateMessage(pongMessage);
-        System.out.println("Ping received, Pong sent to " + sender);
+        long currentTime = System.currentTimeMillis();
+        long pingLatency = currentTime - lastPongTime;
+
+        System.out.println("Ping received, Pong sent to " + sender + ", pinglatency: " + pingLatency + "ms");
     }
 
     private void handlePong(JSONObject jsonMessage) {
