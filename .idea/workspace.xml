@@ -4,21 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f44cd8e2-ea9f-4f22-af20-dce05e88230b" name="Changes" comment="Updated ClientHandler.java&#10;&#10;processMessage works&#10;broadcastSystemMessage works as well">
-      <change afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.jar" beforeDir="false" afterPath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.jar" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradlew" beforeDir="false" afterPath="$PROJECT_DIR$/gradlew" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradlew.bat" beforeDir="false" afterPath="$PROJECT_DIR$/gradlew.bat" afterDir="false" />
+    <list default="true" id="f44cd8e2-ea9f-4f22-af20-dce05e88230b" name="Changes" comment="changed, the JDK to JDK21 Oracle. Didnt work with the other one. &#10;&#10;built the /pm so it works, added some features like /quit and a &gt;.">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Client/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Client/Client.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Server/ClientHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Server/ClientHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Server/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Server/Server.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,33 +67,33 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "Application.Client.executor": "Run",
-    "Gradle.Build theGame.executor": "Run",
-    "Gradle.theGame [:Client.main()].executor": "Run",
-    "Gradle.theGame [:Server.main()].executor": "Run",
-    "Gradle.theGame [build].executor": "Run",
-    "Gradle.theGame [clean].executor": "Run",
-    "Gradle.theGame [jar].executor": "Run",
-    "Kotlin script (Beta).build.gradle.kts.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "chat",
-    "kotlin-language-version-configured": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Project",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "advanced.settings",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;Application.Client.executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.Build theGame.executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.theGame [:Client.main()].executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.theGame [:Server.main()].executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.theGame [build].executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.theGame [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.theGame [jar].executor&quot;: &quot;Run&quot;,
+    &quot;Kotlin script (Beta).build.gradle.kts.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;chat&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;advanced.settings&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="Application.Client">
     <configuration name="Client" type="Application" factoryName="Application" singleton="false">
       <option name="MAIN_CLASS_NAME" value="Client.Client" />
@@ -189,7 +178,8 @@
       <workItem from="1738681954442" duration="1167000" />
       <workItem from="1738686216071" duration="914000" />
       <workItem from="1738690166591" duration="16000" />
-      <workItem from="1738690195780" duration="1773000" />
+      <workItem from="1738690195780" duration="3619000" />
+      <workItem from="1738749066130" duration="3678000" />
     </task>
     <task id="LOCAL-00001" summary="Updated ClientHandler.java&#10;&#10;processMessage works&#10;broadcastSystemMessage works as well">
       <option name="closed" value="true" />
@@ -199,7 +189,23 @@
       <option name="project" value="LOCAL" />
       <updated>1738682429582</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="changed, the JDK to JDK21 Oracle. Didnt work with the other one. &#10;&#10;built the /pm so it works, added some features like /quit and a &gt;.">
+      <option name="closed" value="true" />
+      <created>1738692338198</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1738692338198</updated>
+    </task>
+    <task id="LOCAL-00003" summary="changed, the JDK to JDK21 Oracle. Didnt work with the other one. &#10;&#10;built the /pm so it works, added some features like /quit and a &gt;.">
+      <option name="closed" value="true" />
+      <created>1738692379831</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1738692379831</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -218,7 +224,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Updated ClientHandler.java&#10;&#10;processMessage works&#10;broadcastSystemMessage works as well" />
-    <option name="LAST_COMMIT_MESSAGE" value="Updated ClientHandler.java&#10;&#10;processMessage works&#10;broadcastSystemMessage works as well" />
+    <MESSAGE value="changed, the JDK to JDK21 Oracle. Didnt work with the other one. &#10;&#10;built the /pm so it works, added some features like /quit and a &gt;." />
+    <option name="LAST_COMMIT_MESSAGE" value="changed, the JDK to JDK21 Oracle. Didnt work with the other one. &#10;&#10;built the /pm so it works, added some features like /quit and a &gt;." />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

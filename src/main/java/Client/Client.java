@@ -2,10 +2,17 @@ package Client;
 
 import java.io.*;
 import java.net.Socket;
+import java.sql.SQLOutput;
 import java.util.Scanner;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import javax.xml.transform.Source;
 
 public class Client {
 
@@ -13,6 +20,9 @@ public class Client {
     private BufferedReader in;
     private BufferedWriter out;
     private String username;
+    private long lastPingSentTime = 0;
+    private long pingRoundTripTime = -1;
+    private ScheduledExecutorService pingScheduler;
 
     public Client(Socket socket, String username) {
         try {
@@ -21,6 +31,8 @@ public class Client {
             this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.username = username;
 
+            startPingScheduler();
+
             out.write(username);
             out.newLine();
             out.flush();
@@ -28,6 +40,45 @@ public class Client {
         } catch (IOException e) {
             closeEverything(socket, in, out);
         }
+    }
+
+    public void startPingScheduler() {
+        pingScheduler = Executors.newScheduledThreadPool(1);
+        pingScheduler.scheduleAtFixedRate(this::sendPing, 5, 5,  TimeUnit.SECONDS);
+    }
+
+    private void sendPing() {
+        try {
+            JSONObject pingMessage = new JSONObject();
+            pingMessage.put("type", "ping");
+            pingMessage.put("sender", username);
+            sendJsonMessage(pingMessage);
+            lastPingSentTime = System.currentTimeMillis();
+        } catch (JSONException | IOException e) {
+            System.err.println("Error sending ping: " + e.getMessage());
+            closeEverything(socket, in, out);
+        }
+    }
+
+    public void sendPong(String receiver) throws IOException {
+        if (receiver == null || receiver.isEmpty()) {
+            System.err.println("Pong receiver is missing!");
+            return;
+        }
+
+        JSONObject pongMessage = new JSONObject();
+        pongMessage.put("type", "pong");
+        pongMessage.put("sender", username);
+        pongMessage.put("receiver", receiver);
+
+        sendJsonMessage(pongMessage);
+        System.out.println("[PONG] Sent to " + receiver);
+    }
+
+    private void sendJsonMessage(JSONObject jsonMessage) throws IOException {
+        out.write(jsonMessage.toString());
+        out.newLine();
+        out.flush();
     }
 
     public void sendMessage() {
@@ -122,6 +173,14 @@ public class Client {
                             case "private":
                                 System.out.println("[PRIVATE] " + sender + ": " + content);
                                 break;
+                            case "ping":
+                                String pingSender = jsonMessage.optString("sender");
+                                sendPong(pingSender);
+                                break;
+                            case "pong":
+                                long currentTime = System.currentTimeMillis();
+                                pingRoundTripTime = currentTime - lastPingSentTime;
+                                System.out.println("[PING] received " + pingRoundTripTime + " ms");
                             default:
                                 System.out.println("Unknown message type: " + type);
                         }
