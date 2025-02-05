@@ -72,3 +72,12 @@ yarn.lock
 
 # Ignore generated documentation
 /doc/
+
+/.idea/
+/.gradle/
+/.tmp/
+/caches/
+/daemon/
+/wrapper/
+/native/
+/jdks/
