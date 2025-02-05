@@ -3,18 +3,22 @@ package Server;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 public class ClientHandler implements Runnable {
-
     public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
     private Socket socket;
     private BufferedReader in;
     private BufferedWriter out;
     private String username;
+    private long lastPongTime = 0;
+    private static final long MAX_PING_LATENCY = 3000; // 3 seconds
+    private ScheduledExecutorService pingCheckScheduler;
 
     public ClientHandler(Socket socket) {
         try {
@@ -22,9 +26,9 @@ public class ClientHandler implements Runnable {
             this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.username = in.readLine();
-
             clientHandlers.add(this);
             broadcastSystemMessage(username + " has entered the chat.");
+            startPingCheckScheduler();
         } catch (IOException e) {
             closeEverything(socket, in, out);
         }
@@ -33,13 +37,10 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {
         String messageFromClient;
-
         while (socket.isConnected()) {
             try {
                 messageFromClient = in.readLine();
-                if (messageFromClient == null) {
-                    break;
-                }
+                if (messageFromClient == null) break;
                 processMessage(messageFromClient);
             } catch (IOException e) {
                 break;
@@ -52,22 +53,19 @@ public class ClientHandler implements Runnable {
         try {
             JSONObject jsonMessage = new JSONObject(messageIn);
             String type = jsonMessage.getString("type");
-
             switch (type) {
                 case "group":
+                case "system":
                     broadcastMessage(jsonMessage);
                     break;
                 case "private":
                     sendPrivateMessage(jsonMessage);
                     break;
-                case "system":
-                    broadcastMessage(jsonMessage);
-                    break;
                 case "ping":
                     handlePing(jsonMessage);
                     break;
                 case "pong":
-                    sendPrivateMessage(jsonMessage);
+                    handlePong(jsonMessage);
                     break;
                 default:
                     System.out.println("Unknown message type: " + type);
@@ -75,32 +73,29 @@ public class ClientHandler implements Runnable {
             }
         } catch (JSONException e) {
             System.err.println("Invalid JSON format received: " + messageIn);
-        } catch (Exception e) {
-            System.err.println("An unexpected error occurred during message processing: " + e.getMessage());
         }
     }
 
     private void handlePing(JSONObject jsonMessage) {
         String sender = jsonMessage.optString("sender");
-
-        if (sender == null || sender.isEmpty()) {
+        if (sender.isEmpty()) {
             System.err.println("Ping sender is missing!");
             return;
         }
-
         JSONObject pongMessage = new JSONObject();
         pongMessage.put("type", "pong");
         pongMessage.put("sender", username);
         pongMessage.put("receiver", sender);
-
         sendPrivateMessage(pongMessage);
-        System.out.println("Ping received, Pong sent to " + sender); // Debugging line
+        System.out.println("Ping received, Pong sent to " + sender);
+    }
+
+    private void handlePong(JSONObject jsonMessage) {
+        lastPongTime = System.currentTimeMillis();
     }
 
     public void broadcastMessage(JSONObject message) {
-        Iterator<ClientHandler> iterator = clientHandlers.iterator();
-        while (iterator.hasNext()) {
-            ClientHandler clientHandler = iterator.next();
+        for (ClientHandler clientHandler : clientHandlers) {
             try {
                 if (!clientHandler.username.equals(username)) {
                     clientHandler.out.write(message.toString());
@@ -108,7 +103,6 @@ public class ClientHandler implements Runnable {
                     clientHandler.out.flush();
                 }
             } catch (IOException e) {
-                iterator.remove();
                 closeEverything(clientHandler.socket, clientHandler.in, clientHandler.out);
             }
         }
@@ -117,15 +111,11 @@ public class ClientHandler implements Runnable {
     private void sendPrivateMessage(JSONObject message) {
         String receiver = message.optString("receiver");
         String sender = message.optString("sender");
-
-        if (receiver == null || receiver.isEmpty()) {
+        if (receiver.isEmpty()) {
             System.err.println("Receiver username is missing or empty.");
             return;
         }
-
-        Iterator<ClientHandler> iterator = clientHandlers.iterator();
-        while (iterator.hasNext()) {
-            ClientHandler clientHandler = iterator.next();
+        for (ClientHandler clientHandler : clientHandlers) {
             if (clientHandler.username.equals(receiver) && !clientHandler.username.equals(sender)) {
                 try {
                     clientHandler.out.write(message.toString());
@@ -133,29 +123,30 @@ public class ClientHandler implements Runnable {
                     clientHandler.out.flush();
                     return;
                 } catch (IOException e) {
-                    iterator.remove();
                     closeEverything(clientHandler.socket, clientHandler.in, clientHandler.out);
                     break;
                 }
             }
         }
-
         if (!message.optString("type").equals("pong")) {
-            for (ClientHandler clientHandler : clientHandlers) {
-                if (clientHandler.username.equals(sender)) {
-                    try {
-                        JSONObject notFoundMessage = new JSONObject();
-                        notFoundMessage.put("type", "system");
-                        notFoundMessage.put("content", receiver + " is not online.");
-                        clientHandler.out.write(notFoundMessage.toString());
-                        clientHandler.out.newLine();
-                        clientHandler.out.flush();
-                        break;
-                    } catch (IOException e) {
-                        iterator.remove();
-                        closeEverything(clientHandler.socket, clientHandler.in, clientHandler.out);
-                        break;
-                    }
+            sendUserNotFoundMessage(sender, receiver);
+        }
+    }
+
+    private void sendUserNotFoundMessage(String sender, String receiver) {
+        for (ClientHandler clientHandler : clientHandlers) {
+            if (clientHandler.username.equals(sender)) {
+                try {
+                    JSONObject notFoundMessage = new JSONObject();
+                    notFoundMessage.put("type", "system");
+                    notFoundMessage.put("content", receiver + " is not online.");
+                    clientHandler.out.write(notFoundMessage.toString());
+                    clientHandler.out.newLine();
+                    clientHandler.out.flush();
+                    break;
+                } catch (IOException e) {
+                    closeEverything(clientHandler.socket, clientHandler.in, clientHandler.out);
+                    break;
                 }
             }
         }
@@ -168,15 +159,32 @@ public class ClientHandler implements Runnable {
         broadcastMessage(jsonMessage);
     }
 
-    public void closeEverything(Socket socket, BufferedReader in, BufferedWriter out) {
-        if (socket == null || in == null || out == null) return;
+    private void startPingCheckScheduler() {
+        pingCheckScheduler = Executors.newScheduledThreadPool(1);
+        pingCheckScheduler.scheduleAtFixedRate(() -> {
+            long currentTime = System.currentTimeMillis();
+            long pingLatency = currentTime - lastPongTime;
+            if (lastPongTime > 0 && pingLatency > MAX_PING_LATENCY) {
+                System.out.println("Kicking " + username + " due to high latency (" + pingLatency + " ms)");
+                broadcastSystemMessage(username + " was removed due to high ping.");
+                closeEverything(socket, in, out);
+            }
+        }, 5, 5, TimeUnit.SECONDS);
+    }
 
+    public void closeEverything(Socket socket, BufferedReader in, BufferedWriter out) {
         try {
-            in.close();
-            out.close();
-            socket.close();
+            clientHandlers.remove(this);
+            if (pingCheckScheduler != null) {
+                pingCheckScheduler.shutdown();
+            }
+            if (in != null) in.close();
+            if (out != null) out.close();
+            if (socket != null) socket.close();
+            System.out.println(username + " has been disconnected.");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 }
+
