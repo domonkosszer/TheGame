@@ -38,8 +38,12 @@ public class Client {
             out.flush();
 
             String response = in.readLine();
-            if (response.equals("USERNAME_ACCEPTED")) {
-                System.out.println("Your username has been accepted.");
+            if (response.startsWith("USERNAME_ACCEPTED")) {
+                String[] parts = response.split(" ", 2);
+                if (parts.length > 1) {
+                    selectedUsername = parts[1];  // Update client-side username
+                }
+                System.out.println("Your username has been set to: " + selectedUsername);
                 break;
             } else {
                 System.out.println(response);
@@ -47,6 +51,7 @@ public class Client {
         }
         return selectedUsername;
     }
+
 
     public void startPingScheduler() {
         pingScheduler = Executors.newScheduledThreadPool(1);

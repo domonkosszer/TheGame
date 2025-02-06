@@ -25,7 +25,7 @@ public class ClientHandler implements Runnable {
             this.socket = socket;
             this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            this.username =  handleUsernameSelection();
+            this.username = b0b01();
             clientHandlers.add(this);
             broadcastSystemMessage(username + " has entered the chat");
 
@@ -52,6 +52,32 @@ public class ClientHandler implements Runnable {
         }
         return tempUsername;
     }
+
+    public String b0b01() throws IOException {
+        String tempUsername;
+        while (true) {
+            tempUsername = in.readLine();
+            if (isUsernameTaken(tempUsername)) {
+                int count = 1;
+                String newUsername;
+
+                do {
+                    newUsername = tempUsername + "_" + String.format("%02d", count++);
+                } while (isUsernameTaken(newUsername));
+
+                this.username = newUsername;
+            } else {
+                this.username = tempUsername;
+            }
+
+            out.write("USERNAME_ACCEPTED " + this.username);
+            out.newLine();
+            out.flush();
+            return this.username;
+        }
+    }
+
+
 
     private boolean isUsernameTaken(String username) {
         return clientHandlers.stream().anyMatch(handler -> handler.getUsername().equalsIgnoreCase(username));
