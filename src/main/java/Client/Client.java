@@ -29,29 +29,45 @@ public class Client {
     }
 
     private String selectUsername() throws IOException {
-        String selectedUsername;
-        while (true) {
-            System.out.println("Please enter your username: ");
-            selectedUsername = new Scanner(System.in).nextLine();
-            out.write(selectedUsername);
-            out.newLine();
-            out.flush();
+        String systemUsername = getSystemUsername();
 
-            String response = in.readLine();
-            if (response.startsWith("USERNAME_ACCEPTED")) {
-                String[] parts = response.split(" ", 2);
-                if (parts.length > 1) {
-                    selectedUsername = parts[1];  // Update client-side username
+        out.write(systemUsername);
+        out.newLine();
+        out.flush();
+
+        while (true) {
+            String serverMessage = in.readLine();
+            if (serverMessage.startsWith("SUGGESTED_USERNAME")) {
+                String[] parts = serverMessage.split(" ", 2);
+                String suggestedUsername = parts.length > 1 ? parts[1] : "";
+
+                System.out.println("Suggested username: " + suggestedUsername);
+                System.out.print("Press ENTER to accept, or type another: ");
+
+                Scanner scanner = new Scanner(System.in);
+                String userInput = scanner.nextLine().trim();
+
+                String finalUsername = userInput.isEmpty() ? suggestedUsername : userInput;
+
+                out.write(finalUsername);
+                out.newLine();
+                out.flush();
+
+                String response = in.readLine();
+                if (response.startsWith("USERNAME_ACCEPTED")) {
+                    System.out.println("Your username has been set to: " + finalUsername);
+                    return finalUsername;
+                } else if (response.startsWith("USERNAME_REJECTED")) {  // Handle username rejection
+                    System.out.println(serverMessage.substring("USERNAME_REJECTED ".length())); // Print the rejection message
                 }
-                System.out.println("Your username has been set to: " + selectedUsername);
-                break;
-            } else {
-                System.out.println(response);
             }
         }
-        return selectedUsername;
     }
 
+
+    private String getSystemUsername() {
+        return System.getProperty("user.name");
+    }
 
     public void startPingScheduler() {
         pingScheduler = Executors.newScheduledThreadPool(1);
@@ -121,6 +137,15 @@ public class Client {
             jsonMessage.put("sender", username);
             jsonMessage.put("receiver", parts[1]);
             jsonMessage.put("content", parts[2]);
+        } else if (message.startsWith("/changeUsername")) {
+            String[] parts = message.split(" ", 2);
+            if (parts.length < 2) {
+                System.out.println("Usage: /changeUsername <newUsername>");
+                return null;
+            }
+            jsonMessage.put("type", "changeUsername");
+            jsonMessage.put("sender", username);
+            jsonMessage.put("newUsername", parts[1]);
         } else if (message.equals("/quit")) {
             jsonMessage.put("type", "system");
             jsonMessage.put("content", username + " has left the chat.");
@@ -144,6 +169,9 @@ public class Client {
                     switch (type) {
                         case "system":
                             System.out.println(content);
+                            if (content.startsWith("Your username has been changed to: ")) {
+                                username = content.split(": ")[1].trim();
+                            }
                             break;
                         case "group":
                             System.out.println(sender + ": " + content);
@@ -176,7 +204,6 @@ public class Client {
     }
 
     public static void main(String[] args) throws IOException {
-
         try {
             Socket socket = new Socket("localhost", 2222);
             Client client = new Client(socket);
