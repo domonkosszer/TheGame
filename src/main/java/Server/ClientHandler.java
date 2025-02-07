@@ -35,6 +35,7 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    // Maybe good for further utilisation
     public String handleUsernameSelection() throws IOException {
         String tempUsername;
         while (true) {
@@ -53,31 +54,76 @@ public class ClientHandler implements Runnable {
         return tempUsername;
     }
 
-    public String b0b01() throws IOException {
-        String tempUsername;
-        while (true) {
-            tempUsername = in.readLine();
-            if (isUsernameTaken(tempUsername)) {
-                int count = 1;
-                String newUsername;
+    public void handleUsernameChange(JSONObject jsonMessage) {
+        String newUsername = jsonMessage.optString("newUsername", "").trim();
+        String oldUsername = this.username;
 
-                do {
-                    newUsername = tempUsername + "_" + String.format("%02d", count++);
-                } while (isUsernameTaken(newUsername));
-
-                this.username = newUsername;
-            } else {
-                this.username = tempUsername;
+        if (newUsername.isEmpty() || isUsernameTaken(newUsername)) {
+            try {
+                JSONObject errorMessage = new JSONObject();
+                errorMessage.put("type", "system");
+                errorMessage.put("content", "Username '" + newUsername + "' is already taken or invalid.");
+                out.write(errorMessage.toString());
+                out.newLine();
+                out.flush();
+            } catch (IOException e) {
+                closeEverything(socket, in, out);
             }
+            return;
+        }
 
-            out.write("USERNAME_ACCEPTED " + this.username);
+        this.username = newUsername;
+
+        try {
+            JSONObject successMessage = new JSONObject();
+            successMessage.put("type", "system");
+            successMessage.put("content", "Your username has been changed to: " + newUsername);
+            out.write(successMessage.toString());
             out.newLine();
             out.flush();
-            return this.username;
+        } catch (IOException e) {
+            closeEverything(socket, in, out);
         }
+
+        broadcastSystemMessage(oldUsername + " has changed their username to " + newUsername);
     }
 
+    public String b0b01() throws IOException {
+        String tempUsername = in.readLine(); // Read the initial username attempt
 
+        if (tempUsername == null || tempUsername.trim().isEmpty()) {
+            tempUsername = "Guest";
+        }
+
+        int count = 1;
+        String newUsername = tempUsername;
+        while (isUsernameTaken(newUsername)) {
+            newUsername = tempUsername + "_" + String.format("%02d", count++);
+        }
+
+        out.write("SUGGESTED_USERNAME " + newUsername); // Send the suggested username
+        out.newLine();
+        out.flush();
+
+        String clientResponse = in.readLine(); // Read the client's final choice
+        if (clientResponse != null && !clientResponse.trim().isEmpty() && !isUsernameTaken(clientResponse)) {
+            newUsername = clientResponse;
+        } else if (isUsernameTaken(clientResponse)) {
+            out.write("USERNAME_REJECTED Username is already taken. Please try another username...");
+            out.newLine();
+            out.flush();
+            return b0b01(); // Restart username selection
+        } else {
+            newUsername = tempUsername; // Keep the original if client sends nothing new
+        }
+
+        this.username = newUsername;
+
+        out.write("USERNAME_ACCEPTED " + this.username);
+        out.newLine();
+        out.flush();
+        return this.username;
+    }
 
     private boolean isUsernameTaken(String username) {
         return clientHandlers.stream().anyMatch(handler -> handler.getUsername().equalsIgnoreCase(username));
@@ -119,6 +165,9 @@ public class ClientHandler implements Runnable {
                     break;
                 case "pong":
                     handlePong(jsonMessage);
+                    break;
+                case "changeUsername":
+                    handleUsernameChange(jsonMessage);
                     break;
                 default:
                     System.out.println("Unknown message type: " + type);
