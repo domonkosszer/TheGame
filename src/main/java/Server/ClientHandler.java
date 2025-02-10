@@ -1,10 +1,13 @@
-package Server;
+package server;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -37,7 +40,8 @@ public class ClientHandler implements Runnable {
             broadcastSystemMessage(username + " has entered the chat");
 
             startPingCheckScheduler();
-        } catch (IOException e) {
+        } catch (
+                IOException e) {
             closeEverything(socket, in, out);
         }
     }
@@ -410,4 +414,3 @@ public class ClientHandler implements Runnable {
         }
     }
 }
-
