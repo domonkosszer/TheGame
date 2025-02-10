@@ -1,6 +1,10 @@
-package Client;
+package client;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.Scanner;
 import java.util.concurrent.Executors;
@@ -23,7 +27,8 @@ public class Client {
             this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.username = selectUsername();
             startPingScheduler();
-        } catch (IOException e) {
+        } catch (
+                IOException e) {
             closeEverything(socket, in, out);
         }
     }

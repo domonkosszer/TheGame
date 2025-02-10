@@ -1,4 +1,4 @@
-package Server;
+package server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -20,7 +20,7 @@ public class Server {
 
                 Socket socket = serverSocket.accept();
                 System.out.println("A new client has arrived.");
-                ClientHandler clientHandler = new ClientHandler(socket);
+                server.ClientHandler clientHandler = new server.ClientHandler(socket);
 
                 Thread thread = new Thread(clientHandler);
                 thread.start();
@@ -49,4 +49,3 @@ public class Server {
         server.startServer();
     }
 }
-
