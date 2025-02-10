@@ -149,6 +149,26 @@ public class Client {
         } else if (message.equals("/quit")) {
             jsonMessage.put("type", "system");
             jsonMessage.put("content", username + " has left the chat.");
+        } else if (message.startsWith("/joinLobby")) {
+            String[] parts = message.split(" ", 2);
+            if (parts.length < 2) {
+                System.out.println("Usage: /joinLobby <lobbyName>");
+                return null;
+            }
+            jsonMessage.put("type", "joinLobby");
+            jsonMessage.put("lobbyName", parts[1]);
+        } else if (message.startsWith("/changeLobbyName")) {
+            String[] parts = message.split(" ", 2);
+            if (parts.length < 2) {
+                System.out.println("Usage: /changeLobbyName <newLobbyName>");
+                return null;
+            }
+            jsonMessage.put("type", "changeLobbyName");
+            jsonMessage.put("newLobbyName", parts[1]);
+        } else if (message.startsWith("/lobbylist")) {
+            jsonMessage.put("type", "lobbyList");
+        } else if (message.startsWith("/playerlist")) {
+            jsonMessage.put("type", "playerList");
         } else {
             jsonMessage.put("type", "group");
             jsonMessage.put("sender", username);

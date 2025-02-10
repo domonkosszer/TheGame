@@ -3,10 +3,14 @@ package Server;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -19,6 +23,9 @@ public class ClientHandler implements Runnable {
     private long lastPongTime = 0;
     private static final long MAX_PING_LATENCY = 3000; // 3 seconds
     private ScheduledExecutorService pingCheckScheduler;
+
+    private static final Map<String, ArrayList<ClientHandler>> lobbies = new HashMap<>();
+    private String currentLobby = "General";
 
     public ClientHandler(Socket socket) {
         try {
@@ -52,6 +59,105 @@ public class ClientHandler implements Runnable {
             }
         }
         return tempUsername;
+    }
+
+    public void joinLobby(String lobbyName) {
+        lobbies.computeIfAbsent(lobbyName, k -> new ArrayList<>()).add(this);
+        if (lobbies.containsKey(currentLobby)) {
+            lobbies.get(currentLobby).remove(this);
+        }
+        currentLobby = lobbyName;
+
+        JSONObject response = new JSONObject();
+        response.put("type", "system");
+        response.put("content", "You joined lobby: " + currentLobby);
+        try {
+            out.write(response.toString());
+            out.newLine();
+            out.flush();
+        } catch (IOException e) {
+            closeEverything(socket, in, out);
+        }
+    }
+
+    public void changeLobbyName(String newLobbyName) {
+        if (!lobbies.containsKey(currentLobby)) return;
+
+        ArrayList<ClientHandler> members = lobbies.remove(currentLobby);
+        lobbies.put(newLobbyName, members);
+
+        for (ClientHandler member : members) {
+            member.currentLobby = newLobbyName;
+            try {
+                JSONObject response = new JSONObject();
+                response.put("type", "system");
+                response.put("content", "Lobby renamed to: " + newLobbyName);
+                member.out.write(response.toString());
+                member.out.newLine();
+                member.out.flush();
+            } catch (IOException e) {
+                closeEverything(member.socket, member.in, member.out);
+            }
+        }
+    }
+
+    public void handleLobbyList() {
+        JSONObject response = new JSONObject();
+        response.put("type", "system");
+
+        if (lobbies.isEmpty()) {
+            response.put("content", "No lobbies available");
+        } else {
+            JSONArray availableLobbies = new JSONArray();
+            for (String lobbyName : lobbies.keySet()) {
+                if (!lobbies.get(lobbyName).isEmpty()) {  // Only add non-empty lobbies
+                    availableLobbies.put(lobbyName);
+                }
+            }
+            if (availableLobbies.length() > 0) {
+                response.put("content", "Available lobbies: " + availableLobbies.toString());
+            } else {
+                response.put("content", "No lobbies with players available");
+            }
+        }
+        System.out.println("Sending lobby list: " + response.toString()); // Debug print
+
+        try {
+            out.write(response.toString());
+            out.newLine();
+            out.flush();
+        } catch (IOException e) {
+            closeEverything(socket, in, out);
+        }
+    }
+
+    public void handlePlayerList() {
+        JSONArray lobbyPlayers = new JSONArray();
+        JSONArray serverPlayers = new JSONArray();
+
+        for (ClientHandler clientHandler : clientHandlers) {
+            serverPlayers.put(clientHandler.getUsername());
+            if (currentLobby != null && clientHandler.currentLobby != null && clientHandler.currentLobby.equals(currentLobby)) {
+                lobbyPlayers.put(clientHandler.getUsername());
+            }
+        }
+
+        JSONObject response = new JSONObject();
+        response.put("type", "system");
+        response.put("content", "Players in Lobby `" + (currentLobby != null ? currentLobby : "N/A") + "`: " +
+                (lobbyPlayers.length() > 0 ? lobbyPlayers.toString() : "[]") + // Use [] for empty list
+                "\nAll players in server: " +
+                (serverPlayers.length() > 0 ? serverPlayers.toString() : "[]")); // Use [] for empty list
+
+        System.out.println("Sending player list: " + response.toString()); // Debug print
+
+        try {
+            out.write(response.toString());
+            out.newLine();
+            out.flush();
+        } catch (IOException e) {
+            closeEverything(socket, in, out);
+        }
     }
 
     public void handleUsernameChange(JSONObject jsonMessage) {
@@ -89,7 +195,7 @@ public class ClientHandler implements Runnable {
     }
 
     public String b0b01() throws IOException {
-        String tempUsername = in.readLine(); // Read the initial username attempt
+        String tempUsername = in.readLine();
 
         if (tempUsername == null || tempUsername.trim().isEmpty()) {
             tempUsername = "Guest";
@@ -101,20 +207,20 @@ public class ClientHandler implements Runnable {
             newUsername = tempUsername + "_" + String.format("%02d", count++);
         }
 
-        out.write("SUGGESTED_USERNAME " + newUsername); // Send the suggested username
+        out.write("SUGGESTED_USERNAME " + newUsername);
         out.newLine();
         out.flush();
 
-        String clientResponse = in.readLine(); // Read the client's final choice
+        String clientResponse = in.readLine();
         if (clientResponse != null && !clientResponse.trim().isEmpty() && !isUsernameTaken(clientResponse)) {
             newUsername = clientResponse;
         } else if (isUsernameTaken(clientResponse)) {
             out.write("USERNAME_REJECTED Username is already taken. Please try another username...");
             out.newLine();
             out.flush();
-            return b0b01(); // Restart username selection
+            return b0b01();
         } else {
-            newUsername = tempUsername; // Keep the original if client sends nothing new
+            newUsername = tempUsername;
         }
 
         this.username = newUsername;
@@ -169,6 +275,18 @@ public class ClientHandler implements Runnable {
                 case "changeUsername":
                     handleUsernameChange(jsonMessage);
                     break;
+                case "joinLobby":
+                    joinLobby(jsonMessage.optString("lobbyName"));
+                    break;
+                case "changeLobbyName":
+                    changeLobbyName(jsonMessage.optString("newLobbyName"));
+                    break;
+                case "lobbyList":
+                    handleLobbyList();
+                    break;
+                case "playerList":
+                    handlePlayerList();
+                    break;
                 default:
                     System.out.println("Unknown message type: " + type);
                     break;
@@ -200,15 +318,15 @@ public class ClientHandler implements Runnable {
     }
 
     public void broadcastMessage(JSONObject message) {
-        for (ClientHandler clientHandler : clientHandlers) {
+        for (ClientHandler client : lobbies.getOrDefault(currentLobby, new ArrayList<>())) {
             try {
-                if (!clientHandler.username.equals(username)) {
-                    clientHandler.out.write(message.toString());
-                    clientHandler.out.newLine();
-                    clientHandler.out.flush();
+                if (!client.username.equals(username)) {
+                    client.out.write(message.toString());
+                    client.out.newLine();
+                    client.out.flush();
                 }
             } catch (IOException e) {
-                closeEverything(clientHandler.socket, clientHandler.in, clientHandler.out);
+                closeEverything(client.socket, client.in, client.out);
             }
         }
     }
