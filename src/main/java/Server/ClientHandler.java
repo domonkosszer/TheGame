@@ -34,7 +34,7 @@ public class ClientHandler implements Runnable {
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.username = b0b01();
             clientHandlers.add(this);
-            broadcastSystemMessage(username + " has entered the chat");
+            broadcastSystemMessage(username + " has entered the chat", this);
 
             startPingCheckScheduler();
         } catch (IOException e) {
@@ -42,7 +42,6 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // Maybe good for further utilisation
     public String handleUsernameSelection() throws IOException {
         String tempUsername;
         while (true) {
@@ -78,6 +77,7 @@ public class ClientHandler implements Runnable {
         } catch (IOException e) {
             closeEverything(socket, in, out);
         }
+        broadcastSystemMessage(this.username + " has joined to: " + currentLobby, this);
     }
 
     public void changeLobbyName(String newLobbyName) {
@@ -110,7 +110,7 @@ public class ClientHandler implements Runnable {
         } else {
             JSONArray availableLobbies = new JSONArray();
             for (String lobbyName : lobbies.keySet()) {
-                if (!lobbies.get(lobbyName).isEmpty()) {  // Only add non-empty lobbies
+                if (!lobbies.get(lobbyName).isEmpty()) {
                     availableLobbies.put(lobbyName);
                 }
             }
@@ -120,7 +120,7 @@ public class ClientHandler implements Runnable {
                 response.put("content", "No lobbies with players available");
             }
         }
-        System.out.println("Sending lobby list: " + response.toString()); // Debug print
+        System.out.println("Sending lobby list: " + response.toString());
 
         try {
             out.write(response.toString());
@@ -145,11 +145,11 @@ public class ClientHandler implements Runnable {
         JSONObject response = new JSONObject();
         response.put("type", "system");
         response.put("content", "Players in Lobby `" + (currentLobby != null ? currentLobby : "N/A") + "`: " +
-                (lobbyPlayers.length() > 0 ? lobbyPlayers.toString() : "[]") + // Use [] for empty list
+                (lobbyPlayers.length() > 0 ? lobbyPlayers.toString() : "[]") +
                 "\nAll players in server: " +
-                (serverPlayers.length() > 0 ? serverPlayers.toString() : "[]")); // Use [] for empty list
+                (serverPlayers.length() > 0 ? serverPlayers.toString() : "[]"));
 
-        System.out.println("Sending player list: " + response.toString()); // Debug print
+        System.out.println("Sending player list: " + response.toString());
 
         try {
             out.write(response.toString());
@@ -190,8 +190,7 @@ public class ClientHandler implements Runnable {
         } catch (IOException e) {
             closeEverything(socket, in, out);
         }
-
-        broadcastSystemMessage(oldUsername + " has changed their username to " + newUsername);
+        broadcastSystemMessage(oldUsername + " has changed their username to " + newUsername, this);
     }
 
     public String b0b01() throws IOException {
@@ -375,11 +374,25 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void broadcastSystemMessage(String message) {
+    private void broadcastSystemMessage(String message, ClientHandler sender) {
         JSONObject jsonMessage = new JSONObject();
         jsonMessage.put("type", "system");
         jsonMessage.put("content", message);
-        broadcastMessage(jsonMessage);
+        broadcastMessageToAllClients(jsonMessage, sender);
+    }
+
+    private void broadcastMessageToAllClients(JSONObject message, ClientHandler sender) {
+        for (ClientHandler client : clientHandlers) {
+            if (client != sender) {
+                try {
+                    client.out.write(message.toString());
+                    client.out.newLine();
+                    client.out.flush();
+                } catch (IOException e) {
+                    closeEverything(client.socket, client.in, client.out);
+                }
+            }
+        }
     }
 
     private void startPingCheckScheduler() {
@@ -389,7 +402,7 @@ public class ClientHandler implements Runnable {
             long pingLatency = currentTime - lastPongTime;
             if (lastPongTime > 0 && pingLatency > MAX_PING_LATENCY) {
                 System.out.println("Kicking " + username + " due to high latency (" + pingLatency + " ms)");
-                broadcastSystemMessage(username + " was removed due to high ping.");
+                broadcastSystemMessage(this.username + " was removed due to high ping.", this);
                 closeEverything(socket, in, out);
             }
         }, 5, 5, TimeUnit.SECONDS);
