@@ -1,14 +1,12 @@
 package main;
 
-import java.util.Objects;
-
 import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.image.Image;
-import javafx.scene.input.KeyCombination;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+
+import gui.SceneController;
 
 public class Main extends Application {
     public static void main(String[] args) {
@@ -28,25 +26,33 @@ public class Main extends Application {
      *                     the application scene can be set.
      *                     Applications may create other stages, if needed, but they will not be
      *                     primary stages.
-     * @throws Exception if something goes wrong
      */
     @Override
     public void start(Stage primaryStage) throws Exception {
-        Parent root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource("/fxml/main.fxml")));
-        Scene scene = new Scene(root, 400, 300);
-        //Image icon = new Image("resources/images/icon.png");
+        Scene introScene = new Scene(new javafx.scene.layout.Pane());
+        introScene.setFill(Color.TRANSPARENT);
 
-        primaryStage.setFullScreen(true);
-        primaryStage.setFullScreenExitHint("");
-        primaryStage.setFullScreenExitKeyCombination(KeyCombination.valueOf("f"));
-        //primaryStage.getIcons().add(icon);
-        primaryStage.setTitle("The Game");
-        primaryStage.setScene(scene);
+        SceneController sceneController = new SceneController(introScene);
+        sceneController.loadScene("/fxml/intro.fxml");
+
+        primaryStage.setScene(introScene);
+        primaryStage.initStyle(StageStyle.TRANSPARENT);
         primaryStage.show();
     }
 
+    /**
+     * This method is called when the application should stop,
+     * and provides a convenient place to prepare for application exit and destroy resources.
+     * The implementation of this method provided by the Application class does nothing.
+     *
+     * <p>
+     * NOTE: This method is called on the JavaFX Application Thread.
+     * </p>
+     *
+     * @throws Exception if something goes wrong
+     */
     @Override
-    public void stop() {
+    public void stop() throws Exception{
         //shutdownEverything();
     }
 }

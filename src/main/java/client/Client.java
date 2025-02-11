@@ -69,7 +69,6 @@ public class Client {
         }
     }
 
-
     private String getSystemUsername() {
         return System.getProperty("user.name");
     }
