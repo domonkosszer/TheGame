@@ -165,9 +165,9 @@ public class Client {
             }
             jsonMessage.put("type", "changeLobbyName");
             jsonMessage.put("newLobbyName", parts[1]);
-        } else if (message.startsWith("/lobbyList")) {
+        } else if (message.startsWith("/lobbylist")) {
             jsonMessage.put("type", "lobbyList");
-        } else if (message.startsWith("/playerList")) {
+        } else if (message.startsWith("/playerlist")) {
             jsonMessage.put("type", "playerList");
         } else {
             jsonMessage.put("type", "group");
@@ -188,7 +188,7 @@ public class Client {
                     String sender = jsonMessage.optString("sender", "SYSTEM");
                     switch (type) {
                         case "system":
-                            System.out.println("[System]: " + content);
+                            System.out.println(content);
                             if (content.startsWith("Your username has been changed to: ")) {
                                 username = content.split(": ")[1].trim();
                             }
