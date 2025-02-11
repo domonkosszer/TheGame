@@ -1,27 +1,25 @@
 package gui;
 
-import java.util.HashMap;
-
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 
+import java.io.IOException;
+
+/**
+ * A controller for managing and dynamically switching between JavaFX scenes.
+ */
 public class SceneController {
-    private HashMap<String, Pane> screenMap = new HashMap<>();
-    private Scene main;
+    private final Scene mainScene;
 
-    public SceneController(Scene main) {
-        this.main = main;
+    public SceneController(Scene mainScene) {
+        this.mainScene = mainScene;
     }
 
-    protected void addScene(String name, Pane pane){
-        screenMap.put(name, pane);
-    }
+    public void loadScene(String fxmlPath) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+        Pane pane = loader.load();
 
-    protected void removeScene(String name){
-        screenMap.remove(name);
-    }
-
-    protected void activate(String name){
-        main.setRoot( screenMap.get(name) );
+        mainScene.setRoot(pane);
     }
 }
