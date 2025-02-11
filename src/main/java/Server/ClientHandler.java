@@ -34,7 +34,7 @@ public class ClientHandler implements Runnable {
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.username = b0b01();
             clientHandlers.add(this);
-            broadcastSystemMessage(username + " has entered the chat");
+            broadcastSystemMessage(username + " has joined to the server", this);
 
             startPingCheckScheduler();
         } catch (IOException e) {
@@ -78,6 +78,44 @@ public class ClientHandler implements Runnable {
         } catch (IOException e) {
             closeEverything(socket, in, out);
         }
+
+        // Notify all except the sender
+        broadcastSystemMessage(username + " has joined lobby: " + currentLobby, this);
+    }
+
+    public void handleUsernameChange(JSONObject jsonMessage) {
+        String newUsername = jsonMessage.optString("newUsername", "").trim();
+        String oldUsername = this.username;
+
+        if (newUsername.isEmpty() || isUsernameTaken(newUsername)) {
+            try {
+                JSONObject errorMessage = new JSONObject();
+                errorMessage.put("type", "system");
+                errorMessage.put("content", "Username '" + newUsername + "' is already taken or invalid.");
+                out.write(errorMessage.toString());
+                out.newLine();
+                out.flush();
+            } catch (IOException e) {
+                closeEverything(socket, in, out);
+            }
+            return;
+        }
+
+        this.username = newUsername;
+
+        try {
+            JSONObject successMessage = new JSONObject();
+            successMessage.put("type", "system");
+            successMessage.put("content", "Your username has been changed to: " + newUsername);
+            out.write(successMessage.toString());
+            out.newLine();
+            out.flush();
+        } catch (IOException e) {
+            closeEverything(socket, in, out);
+        }
+
+        // Notify all except the sender
+        broadcastSystemMessage(oldUsername + " has changed their username to " + newUsername, this);
     }
 
     public void changeLobbyName(String newLobbyName) {
@@ -160,39 +198,6 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    public void handleUsernameChange(JSONObject jsonMessage) {
-        String newUsername = jsonMessage.optString("newUsername", "").trim();
-        String oldUsername = this.username;
-
-        if (newUsername.isEmpty() || isUsernameTaken(newUsername)) {
-            try {
-                JSONObject errorMessage = new JSONObject();
-                errorMessage.put("type", "system");
-                errorMessage.put("content", "Username '" + newUsername + "' is already taken or invalid.");
-                out.write(errorMessage.toString());
-                out.newLine();
-                out.flush();
-            } catch (IOException e) {
-                closeEverything(socket, in, out);
-            }
-            return;
-        }
-
-        this.username = newUsername;
-
-        try {
-            JSONObject successMessage = new JSONObject();
-            successMessage.put("type", "system");
-            successMessage.put("content", "Your username has been changed to: " + newUsername);
-            out.write(successMessage.toString());
-            out.newLine();
-            out.flush();
-        } catch (IOException e) {
-            closeEverything(socket, in, out);
-        }
-
-        broadcastSystemMessage(oldUsername + " has changed their username to " + newUsername);
-    }
 
     public String b0b01() throws IOException {
         String tempUsername = in.readLine();
@@ -375,11 +380,25 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void broadcastSystemMessage(String message) {
+    private void broadcastSystemMessage(String message, ClientHandler sender) {
         JSONObject jsonMessage = new JSONObject();
         jsonMessage.put("type", "system");
         jsonMessage.put("content", message);
-        broadcastMessage(jsonMessage);
+        broadcastMessageToAllClients(jsonMessage, sender);
+    }
+
+    private void broadcastMessageToAllClients(JSONObject message, ClientHandler sender) {
+        for (ClientHandler client : clientHandlers) {
+            if (client != sender) { // Exclude the sender
+                try {
+                    client.out.write(message.toString());
+                    client.out.newLine();
+                    client.out.flush();
+                } catch (IOException e) {
+                    closeEverything(client.socket, client.in, client.out);
+                }
+            }
+        }
     }
 
     private void startPingCheckScheduler() {
@@ -389,7 +408,7 @@ public class ClientHandler implements Runnable {
             long pingLatency = currentTime - lastPongTime;
             if (lastPongTime > 0 && pingLatency > MAX_PING_LATENCY) {
                 System.out.println("Kicking " + username + " due to high latency (" + pingLatency + " ms)");
-                broadcastSystemMessage(username + " was removed due to high ping.");
+                broadcastSystemMessage(username + " was removed due to high ping.", this);
                 closeEverything(socket, in, out);
             }
         }, 5, 5, TimeUnit.SECONDS);

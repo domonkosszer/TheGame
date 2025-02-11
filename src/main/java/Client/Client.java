@@ -165,9 +165,9 @@ public class Client {
             }
             jsonMessage.put("type", "changeLobbyName");
             jsonMessage.put("newLobbyName", parts[1]);
-        } else if (message.startsWith("/lobbylist")) {
+        } else if (message.startsWith("/lobbyList")) {
             jsonMessage.put("type", "lobbyList");
-        } else if (message.startsWith("/playerlist")) {
+        } else if (message.startsWith("/playerList")) {
             jsonMessage.put("type", "playerList");
         } else {
             jsonMessage.put("type", "group");
