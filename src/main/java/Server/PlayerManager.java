@@ -2,6 +2,8 @@ package Server;
 
 import java.io.IOException;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PlayerManager {
     private static final String URL = "jdbc:sqlite:mydb.sqlite";
@@ -26,6 +28,23 @@ public class PlayerManager {
         }
     }
 
+    public static List<String> getOnlinePlayers() {
+        List<String> onlinePlayers = new ArrayList<>();
+        String sql = "SELECT username FROM users WHERE online = 1";
+
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                onlinePlayers.add(rs.getString("username"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return onlinePlayers;
+    }
+
     public static void addUser(String username) {
         try (Connection connection = getConnection();
              PreparedStatement stmt = connection.prepareStatement("INSERT INTO users (username) VALUES (?)")) {
@@ -37,13 +56,12 @@ public class PlayerManager {
     }
 
     public static void setUserOnline(String username) {
-        String sql = "UPDATE users SET online = ? WHERE username = ?";
-        try {
-            var connection = getConnection();
-            var prepstate = connection.prepareStatement(sql);
+        String sql = "UPDATE users SET online = 1 WHERE username = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement prepstate = connection.prepareStatement(sql)) {
             prepstate.setString(1, username);
             prepstate.executeUpdate();
-        } catch ( SQLException e ) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
