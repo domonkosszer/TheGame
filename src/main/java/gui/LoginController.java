@@ -1,22 +1,30 @@
 package gui;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.control.TextField;
-
 import java.io.IOException;
+import java.net.Socket;
+import client.Client;
 
 /**
  * Controller for the login scene.
  */
-public class LoginController {
-    private SceneController sceneController;
-
-    @FXML
-    private TextField usernameField;
+public class LoginController extends BaseController {
+    private Client client;
 
     @FXML
     public void initialize() {
-        String systemUsername = getSystemUsername();
+        try {
+            Socket socket = new Socket("localhost", 2222);
+            client = new Client(socket);
+            client.setBaseController(this);
+            client.listenForMessage();
+            Platform.runLater(() -> sceneController.setClient(client));
+        } catch (IOException e) {
+            client.reconnect();
+        }
+
+        String systemUsername = System.getProperty("user.name");
         usernameField.setText(systemUsername);
     }
 
@@ -24,21 +32,10 @@ public class LoginController {
      * Handles the login action.
      */
     @FXML
-    public void handleLogin() {
-
-        String username = usernameField.getText();
-
-        if (username != null && !username.trim().isEmpty()) {
-            System.out.println("Username: " + username);
-            try {
-                sceneController.loadScene("/fxml/menu.fxml");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+    private void handleLogin() throws IOException {
+        String username = usernameField.getText().trim();
+        if (!username.isEmpty()) {
+            client.selectUsername(username);
         }
-    }
-
-    private String getSystemUsername() {
-        return System.getProperty("user.name");
     }
 }

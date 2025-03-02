@@ -5,7 +5,6 @@ import javafx.fxml.FXML;
 import javafx.scene.Scene;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
@@ -18,7 +17,7 @@ import java.util.Objects;
 /**
  * Controller for the intro scene.
  */
-public class IntroController {
+public class IntroController extends BaseController {
 
     @FXML
     private StackPane root;
@@ -28,17 +27,19 @@ public class IntroController {
     public void initialize() {
         PauseTransition delay = new PauseTransition(Duration.seconds(3));
         delay.setOnFinished(event -> moveToMainScene());
-
         delay.play();
 
-        root.setOnKeyPressed(event -> {
-            if (Objects.requireNonNull(event.getCode()) == KeyCode.SPACE) {
-                delay.stop();
-                moveToMainScene();
+        root.sceneProperty().addListener((observable, oldScene, newScene) -> {
+            if (newScene != null) {
+                newScene.setOnKeyPressed(event -> {
+                    if (Objects.requireNonNull(event.getCode()) == KeyCode.SPACE) {
+                        delay.stop();
+                        moveToMainScene();
+                    }
+                });
+                root.requestFocus();
             }
         });
-
-        root.requestFocus();
     }
 
     /**
@@ -49,20 +50,33 @@ public class IntroController {
         introstage.close();
 
         Stage mainstage = new Stage();
-        Scene mainScene = new Scene(new Pane(), 800, 600);
+        Scene mainScene = getLoginScene(mainstage);
 
+        mainstage.setOnCloseRequest(event -> {
+            System.exit(0);
+        });
+
+        mainstage.setFullScreen(true);
+        mainstage.setFullScreenExitHint("");
+        mainstage.setTitle("The Game");
+        mainstage.setScene(mainScene);
+        mainstage.initStyle(StageStyle.DECORATED);
+        mainstage.show();
+    }
+
+    private static Scene getLoginScene(Stage mainstage) {
+        Scene mainScene = new Scene(new Pane(), 800, 600);
         SceneController sceneController = new SceneController(mainScene);
 
         try {
             sceneController.loadScene("/fxml/login.fxml");
         } catch (IOException ignored) {}
 
-        mainstage.setFullScreen(true);
-        mainstage.setFullScreenExitHint("");
-        mainstage.setFullScreenExitKeyCombination(KeyCombination.valueOf("F"));
-        mainstage.setTitle("The Game");
-        mainstage.setScene(mainScene);
-        mainstage.initStyle(StageStyle.DECORATED);
-        mainstage.show();
+        mainScene.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.F && !(mainScene.getFocusOwner() instanceof javafx.scene.control.TextInputControl)) {
+                mainstage.setFullScreen(!mainstage.isFullScreen());
+            }
+        });
+        return mainScene;
     }
 }

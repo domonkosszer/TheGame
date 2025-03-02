@@ -1,11 +1,15 @@
 package main;
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import gui.IntroController;
 import gui.SceneController;
 
 public class Main extends Application {
@@ -34,6 +38,10 @@ public class Main extends Application {
 
         SceneController sceneController = new SceneController(introScene);
         sceneController.loadScene("/fxml/intro.fxml");
+
+        primaryStage.setOnCloseRequest(event -> {
+            System.exit(0);
+        });
 
         primaryStage.setScene(introScene);
         primaryStage.initStyle(StageStyle.TRANSPARENT);

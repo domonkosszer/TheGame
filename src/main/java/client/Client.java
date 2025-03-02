@@ -6,10 +6,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
-import java.util.Scanner;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import javafx.application.Platform;
+
+import gui.BaseController;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -18,167 +21,97 @@ public class Client {
     private BufferedReader in;
     private BufferedWriter out;
     private String username;
+    private long lastPingTime;
+    private long lastPongTime;
+    private int pongLatency;
+    private volatile boolean isRunning = true;
     private ScheduledExecutorService pingScheduler;
+    private BaseController baseController;
 
     public Client(Socket socket) {
         try {
             this.socket = socket;
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            this.username = selectUsername();
+            this.lastPongTime = System.currentTimeMillis();
             startPingScheduler();
-        } catch (
-                IOException e) {
-            closeEverything(socket, in, out);
+        } catch (IOException e) {
+            reconnect();
         }
     }
 
-    private String selectUsername() throws IOException {
-        String systemUsername = getSystemUsername();
+    public void setBaseController(BaseController baseController) {
+        this.baseController = baseController;
+    }
 
-        out.write(systemUsername);
-        out.newLine();
-        out.flush();
-
-        while (true) {
-            String serverMessage = in.readLine();
-            if (serverMessage.startsWith("SUGGESTED_USERNAME")) {
-                String[] parts = serverMessage.split(" ", 2);
-                String suggestedUsername = parts.length > 1 ? parts[1] : "";
-
-                System.out.println("Suggested username: " + suggestedUsername);
-                System.out.print("Press ENTER to accept, or type another: ");
-
-                Scanner scanner = new Scanner(System.in);
-                String userInput = scanner.nextLine().trim();
-
-                String finalUsername = userInput.isEmpty() ? suggestedUsername : userInput;
-
-                out.write(finalUsername);
-                out.newLine();
-                out.flush();
-
-                String response = in.readLine();
-                if (response.startsWith("USERNAME_ACCEPTED")) {
-                    System.out.println("Your username has been set to: " + finalUsername);
-                    return finalUsername;
-                } else if (response.startsWith("USERNAME_REJECTED")) {  // Handle username rejection
-                    System.out.println(serverMessage.substring("USERNAME_REJECTED ".length())); // Print the rejection message
-                }
-            }
+    public void selectUsername(String userInput) throws IOException {
+        if (!userInput.equals(this.username)) {
+            createJsonMessage(new String[] {"username", userInput});
         }
     }
 
-    private String getSystemUsername() {
-        return System.getProperty("user.name");
+    private void handleSuggestedUsername(String suggestedUsername) {
+        Platform.runLater(() -> baseController.setUsername(suggestedUsername));
     }
 
     public void startPingScheduler() {
         pingScheduler = Executors.newScheduledThreadPool(1);
-        pingScheduler.scheduleAtFixedRate(this::sendPing, 5, 5, TimeUnit.SECONDS);
+        pingScheduler.scheduleAtFixedRate(this::sendPing, 0, 2, TimeUnit.SECONDS);
     }
 
     private void sendPing() {
         try {
-            JSONObject pingMessage = new JSONObject();
-            pingMessage.put("type", "ping");
-            pingMessage.put("sender", username);
-            sendJsonMessage(pingMessage);
-        } catch (JSONException | IOException e) {
-            System.err.println("Error sending ping: " + e.getMessage());
-            closeEverything(socket, in, out);
+            lastPingTime = System.currentTimeMillis();
+            createJsonMessage(new String[] {"ping"});
+        } catch (IOException e) {
+            reconnect();
         }
     }
 
-    public void sendPong(String receiver) throws IOException {
-        if (receiver.isEmpty()) {
-            System.err.println("Pong receiver is missing!");
-            return;
-        }
-        JSONObject pongMessage = new JSONObject();
-        pongMessage.put("type", "pong");
-        pongMessage.put("sender", username);
-        pongMessage.put("receiver", receiver);
-        sendJsonMessage(pongMessage);
+    private void handlePong() {
+        long currentTime = System.currentTimeMillis();
+        lastPongTime = currentTime;
+        pongLatency = (int) (currentTime - lastPingTime);
+        setPing();
     }
 
-    private void sendJsonMessage(JSONObject jsonMessage) throws IOException {
+    public void setPing() {
+        baseController.setPing(pongLatency);
+    }
+
+    public void quit() {
+        isRunning = false;
+        try{
+            createJsonMessage(new String[] {"quit"});
+        } catch (IOException e) {
+            System.err.println("Error sending quit message: " + e.getMessage());
+        }
+        closeEverything();
+        System.exit(0);
+    }
+
+    private void createJsonMessage(String[] input) throws IOException {
+        JSONObject jsonMessage = new JSONObject();
+        String type = input[0];
+        jsonMessage.put("type", type);
+
+        switch(type) {
+            case "private":
+                jsonMessage.put("receiver", input[1]);
+                jsonMessage.put("content", input[2]);
+                break;
+            case "username",
+                 "message":
+                jsonMessage.put("content", input[1]);
+                break;
+            case "lobby":
+                jsonMessage.put("lobbyName", input[1]);
+                break;
+        }
         out.write(jsonMessage.toString());
+        System.out.println("Sent: " + jsonMessage);
         out.newLine();
         out.flush();
-    }
-
-    public void sendMessage() {
-        try (Scanner scanner = new Scanner(System.in)) {
-            while (socket.isConnected()) {
-                System.out.print("> ");
-                String message = scanner.nextLine();
-                if (message.isEmpty()) continue;
-                try {
-                    JSONObject jsonMessage = createJsonMessage(message);
-                    if (jsonMessage != null) {
-                        sendJsonMessage(jsonMessage);
-                    }
-                } catch (IOException e) {
-                    closeEverything(socket, in, out);
-                    break;
-                } catch (JSONException e) {
-                    System.err.println("Error creating JSON message: " + e.getMessage());
-                }
-            }
-        }
-    }
-
-    private JSONObject createJsonMessage(String message) {
-        JSONObject jsonMessage = new JSONObject();
-        if (message.startsWith("/pm")) {
-            String[] parts = message.split(" ", 3);
-            if (parts.length < 3) {
-                System.out.println("Invalid private message, use /pm <username> <message>");
-                return null;
-            }
-            jsonMessage.put("type", "private");
-            jsonMessage.put("sender", username);
-            jsonMessage.put("receiver", parts[1]);
-            jsonMessage.put("content", parts[2]);
-        } else if (message.startsWith("/changeUsername")) {
-            String[] parts = message.split(" ", 2);
-            if (parts.length < 2) {
-                System.out.println("Usage: /changeUsername <newUsername>");
-                return null;
-            }
-            jsonMessage.put("type", "changeUsername");
-            jsonMessage.put("sender", username);
-            jsonMessage.put("newUsername", parts[1]);
-        } else if (message.equals("/quit")) {
-            jsonMessage.put("type", "system");
-            jsonMessage.put("content", username + " has left the chat.");
-        } else if (message.startsWith("/joinLobby")) {
-            String[] parts = message.split(" ", 2);
-            if (parts.length < 2) {
-                System.out.println("Usage: /joinLobby <lobbyName>");
-                return null;
-            }
-            jsonMessage.put("type", "joinLobby");
-            jsonMessage.put("lobbyName", parts[1]);
-        } else if (message.startsWith("/changeLobbyName")) {
-            String[] parts = message.split(" ", 2);
-            if (parts.length < 2) {
-                System.out.println("Usage: /changeLobbyName <newLobbyName>");
-                return null;
-            }
-            jsonMessage.put("type", "changeLobbyName");
-            jsonMessage.put("newLobbyName", parts[1]);
-        } else if (message.startsWith("/lobbylist")) {
-            jsonMessage.put("type", "lobbyList");
-        } else if (message.startsWith("/playerlist")) {
-            jsonMessage.put("type", "playerList");
-        } else {
-            jsonMessage.put("type", "group");
-            jsonMessage.put("sender", username);
-            jsonMessage.put("content", message);
-        }
-        return jsonMessage;
     }
 
     public void listenForMessage() {
@@ -186,16 +119,23 @@ public class Client {
             String message;
             try {
                 while ((message = in.readLine()) != null) {
+                    System.out.println("Received: " + message);
                     JSONObject jsonMessage = new JSONObject(message);
                     String type = jsonMessage.getString("type");
-                    String content = jsonMessage.getString("content");
+                    String content = jsonMessage.optString("content");
                     String sender = jsonMessage.optString("sender", "SYSTEM");
                     switch (type) {
                         case "system":
                             System.out.println(content);
-                            if (content.startsWith("Your username has been changed to: ")) {
-                                username = content.split(": ")[1].trim();
-                            }
+                            break;
+                        case "suggested username":
+                            handleSuggestedUsername(content);
+                            break;
+                        case "final username":
+                            this.username = content;
+                            Platform.runLater(() -> {
+                                baseController.switchScene("/fxml/menu.fxml");
+                            });
                             break;
                         case "group":
                             System.out.println(sender + ": " + content);
@@ -203,21 +143,33 @@ public class Client {
                         case "private":
                             System.out.println("[PRIVATE] " + sender + ": " + content);
                             break;
-                        case "ping":
-                            String pingSender = jsonMessage.optString("sender");
-                            sendPong(pingSender);
+                        case "pong":
+                            handlePong();
                             break;
                         default:
                             System.out.println("Unknown message type: " + type);
                     }
                 }
             } catch (IOException | JSONException e) {
-                closeEverything(socket, in, out);
+                reconnect();
             }
         }).start();
     }
 
-    public void closeEverything(Socket socket, BufferedReader in, BufferedWriter out) {
+    public void reconnect() {
+        closeEverything();
+        try {
+            Socket newSocket = new Socket("localhost", 2222);
+            this.socket = newSocket;
+            this.in = new BufferedReader(new InputStreamReader(newSocket.getInputStream()));
+            this.out = new BufferedWriter(new OutputStreamWriter(newSocket.getOutputStream()));
+            listenForMessage();
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
+        }
+    }
+
+    public void closeEverything() {
         try {
             if (in != null) in.close();
             if (out != null) out.close();
@@ -227,14 +179,7 @@ public class Client {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        try {
-            Socket socket = new Socket("localhost", 2222);
-            Client client = new Client(socket);
-            client.listenForMessage();
-            client.sendMessage();
-        } catch (IOException e) {
-            System.err.println("Error connecting to server: " + e.getMessage());
-        }
+    public String getUsername() {
+        return this.username;
     }
 }
