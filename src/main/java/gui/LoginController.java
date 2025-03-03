@@ -21,7 +21,7 @@ public class LoginController extends BaseController {
             client.listenForMessage();
             Platform.runLater(() -> sceneController.setClient(client));
         } catch (IOException e) {
-            client.reconnect();
+            Platform.runLater(() -> client.reconnect());
         }
 
         String systemUsername = System.getProperty("user.name");
