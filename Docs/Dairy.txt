@@ -1,0 +1,22 @@
+Diary
+
+17.02.25 - We sat down to analyze the requirements of the game. We decided to collect game and execution ideas. We brainstormed for
+           a while to find a logic that we could follow through the process of implementation, such as possible network communication.
+           In the beginning, our focus was on how rather than what.
+
+23.02.25 - Finally, we collected all our ideas for the game. We considered both round-based and real-time games. Due to our fascination
+           with Monopoly and other strategic games, we decided to try our luck at implementing a better version of Monopoly.
+
+27.02.25 - We started to create some UML diagrams for our existing classes to visualize how everything should work. We had a little
+           knowledge gap between each of us, and we tried to bridge that over the last few days/weeks.
+
+01.03.25 - After finalizing the plan, we discussed who was responsible for what. We divided the group into three parts. Pascal is
+           responsible for the network protocol. He will design and visualize what the communication between the server and client
+           should look like, implementing methods of messaging. Dominik is responsible for the basics of the GUI; he will build a
+           basic yet sleek user interface. Domonkos is in charge of the server and client architecture. He will handle new client
+           connections to the server.
+
+04.03.25 - A few days away from our first milestone, we are preparing the final modifications regarding who is doing what. Our
+           goal is to implement a robust and modular base so we can easily add our ideas in the future.
+
+

@@ -1,0 +1,33 @@
+Software Requirements
+
+1. User Registration and Login
+    - Users must be able to register
+    - Users should be able to log in to their accounts via username
+
+2. Game Lobby
+    - Users should be able to create and join lobbies
+    - User should be able to display the current players and statuses
+
+3. Game Mechanics
+    - Dice rolling mechanic
+    - Property buying and trading
+    - Money management (bank system)
+    - Player movement on the board
+    - Handling of special cards
+
+4. Chat Functionality
+    - Real-time messaging between players in the lobby and during the game
+    - Ability to send public and private messages
+
+5. Turn Management
+    - Mechanism to track whose turn it is
+    - Enforcing turn-based actions
+
+6. Game State Persistence
+    - Save and load game state so that a game can be resumed
+    - Server maintains game state to synchronize across clients
+
+7. Exit and Reset
+    - Ability to exit the game cleanly
+    - Option to reset the game for new sessions
+@
