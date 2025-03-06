@@ -13,8 +13,7 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 
 import gui.BaseController;
-import org.json.JSONException;
-import org.json.JSONObject;
+import protocol.Protocol;
 
 public class Client {
     private Socket socket;
@@ -46,7 +45,7 @@ public class Client {
 
     public void selectUsername(String userInput) throws IOException {
         if (!userInput.equals(this.username)) {
-            createJsonMessage(new String[] {"username", userInput});
+            createMessage(new String[] {"username", userInput});
         }
     }
 
@@ -62,7 +61,7 @@ public class Client {
     private void sendPing() {
         try {
             lastPingTime = System.currentTimeMillis();
-            createJsonMessage(new String[] {"ping"});
+            createMessage(new String[] {"ping"});
         } catch (IOException e) {
             reconnect();
         }
@@ -82,7 +81,7 @@ public class Client {
     public void quit() {
         isRunning = false;
         try{
-            createJsonMessage(new String[] {"quit"});
+            createMessage(new String[] {"quit"});
         } catch (IOException e) {
             System.err.println("Error sending quit message: " + e.getMessage());
         }
@@ -90,26 +89,26 @@ public class Client {
         System.exit(0);
     }
 
-    private void createJsonMessage(String[] input) throws IOException {
-        JSONObject jsonMessage = new JSONObject();
+    private void createMessage(String[] input) throws IOException {
+        Protocol protocolMessage = new Protocol();
         String type = input[0];
-        jsonMessage.put("type", type);
+        protocolMessage.put("type", type);
 
         switch(type) {
             case "private":
-                jsonMessage.put("receiver", input[1]);
-                jsonMessage.put("content", input[2]);
+                protocolMessage.put("receiver", input[1]);
+                protocolMessage.put("content", input[2]);
                 break;
             case "username",
                  "message":
-                jsonMessage.put("content", input[1]);
+                protocolMessage.put("content", input[1]);
                 break;
             case "lobby":
-                jsonMessage.put("lobbyName", input[1]);
+                protocolMessage.put("lobbyName", input[1]);
                 break;
         }
-        out.write(jsonMessage.toString());
-        System.out.println("Sent: " + jsonMessage);
+        out.write(protocolMessage.toString());
+        System.out.println("Sent: " + protocolMessage);
         out.newLine();
         out.flush();
     }
@@ -120,10 +119,10 @@ public class Client {
             try {
                 while ((message = in.readLine()) != null) {
                     System.out.println("Received: " + message);
-                    JSONObject jsonMessage = new JSONObject(message);
-                    String type = jsonMessage.getString("type");
-                    String content = jsonMessage.optString("content");
-                    String sender = jsonMessage.optString("sender", "SYSTEM");
+                    Protocol protocolMessage = new Protocol(message);
+                    String type = protocolMessage.getString("type");
+                    String content = protocolMessage.getString("content");
+                    String sender = protocolMessage.getString("sender");
                     switch (type) {
                         case "system":
                             System.out.println(content);
@@ -150,7 +149,7 @@ public class Client {
                             System.out.println("Unknown message type: " + type);
                     }
                 }
-            } catch (IOException | JSONException e) {
+            } catch (IOException e) {
                 reconnect();
             }
         }).start();

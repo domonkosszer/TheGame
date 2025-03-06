@@ -14,8 +14,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import protocol.Protocol;
 
 public class ClientHandler implements Runnable {
     public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
@@ -49,7 +48,7 @@ public class ClientHandler implements Runnable {
         }
         currentLobby = lobbyName;
 
-        JSONObject response = new JSONObject();
+        Protocol response = new Protocol();
         response.put("type", "system");
         response.put("content", "You joined lobby: " + currentLobby);
         try {
@@ -70,7 +69,7 @@ public class ClientHandler implements Runnable {
         for (ClientHandler member : members) {
             member.currentLobby = newLobbyName;
             try {
-                JSONObject response = new JSONObject();
+                Protocol response = new Protocol();
                 response.put("type", "system");
                 response.put("content", "Lobby renamed to: " + newLobbyName);
                 member.out.write(response.toString());
@@ -83,7 +82,7 @@ public class ClientHandler implements Runnable {
     }
 
     public void handleLobbyList() {
-        JSONObject response = new JSONObject();
+        Protocol response = new Protocol();
         response.put("type", "system");
 
         if (lobbies.isEmpty()) {
@@ -123,7 +122,7 @@ public class ClientHandler implements Runnable {
             }
         }
 
-        createJsonMessage(new String[] {"system", "Players in Lobby `" + (currentLobby != null ? currentLobby : "N/A") + "`: " +
+        createMessage(new String[] {"system", "Players in Lobby `" + (currentLobby != null ? currentLobby : "N/A") + "`: " +
                 (!lobbyPlayers.isEmpty() ? lobbyPlayers.toString() : "[]") +
                 "\nAll players in server: " + (!serverPlayers.isEmpty() ? serverPlayers.toString() : "[]" )});
     }
@@ -133,17 +132,17 @@ public class ClientHandler implements Runnable {
 
         if (!isUsernameTaken(tempUsername)) {
             this.username = tempUsername;
-            createJsonMessage(new String[] {"final username", tempUsername});
+            createMessage(new String[] {"final username", tempUsername});
 
             if (isNewUser) {
                 broadcastSystemMessage(tempUsername + " has joined the server.");
                 clientHandlers.add(this);
             } else {
-                createJsonMessage(new String[] {"system", "Your username has been changed to: " + tempUsername});
+                createMessage(new String[] {"system", "Your username has been changed to: " + tempUsername});
             }
         } else {
             String suggestedUsername = bob001(tempUsername);
-            createJsonMessage(new String[] {"suggested username", suggestedUsername});
+            createMessage(new String[] {"suggested username", suggestedUsername});
         }
     }
 
@@ -182,10 +181,10 @@ public class ClientHandler implements Runnable {
         closeEverything(socket, in, out);
     }
 
-    private void createJsonMessage(String[] input) throws IOException {
-        JSONObject jsonMessage = new JSONObject();
+    private void createMessage(String[] input) throws IOException {
+        Protocol message = new Protocol();
         String type = input[0];
-        jsonMessage.put("type", type);
+        message.put("type", type);
 
         switch(type) {
             case "pong":
@@ -194,43 +193,43 @@ public class ClientHandler implements Runnable {
                  "message",
                  "suggested username",
                  "final username":
-                jsonMessage.put("content", input[1]);
+                message.put("content", input[1]);
                 break;
             case "lobby":
-                jsonMessage.put("lobbyName", input[1]);
+                message.put("lobbyName", input[1]);
                 break;
         }
 
-        out.write(jsonMessage.toString());
+        out.write(message.toString());
         out.newLine();
         out.flush();
     }
 
     private void processMessage(String messageIn) {
         try {
-            JSONObject jsonMessage = new JSONObject(messageIn);
-            String type = jsonMessage.getString("type");
+            Protocol message = new Protocol(messageIn);
+            String type = message.getString("type");
             switch (type) {
                 case "group":
                     break;
                 case "message":
-                    broadcastMessage(jsonMessage);
+                    broadcastMessage(message);
                     break;
                 case "private":
-                    sendPrivateMessage(jsonMessage);
+                    sendPrivateMessage(message);
                     break;
                 case "ping":
                     handlePing();
                     break;
                 case "username":
-                    String content = jsonMessage.optString("content");
+                    String content = message.getString("content");
                     handleUsername(content);
                     break;
                 case "joinLobby":
-                    joinLobby(jsonMessage.optString("lobbyName"));
+                    joinLobby(message.getString("lobbyName"));
                     break;
                 case "changeLobbyName":
-                    changeLobbyName(jsonMessage.optString("newLobbyName"));
+                    changeLobbyName(message.getString("newLobbyName"));
                     break;
                 case "lobbyList":
                     handleLobbyList();
@@ -245,8 +244,8 @@ public class ClientHandler implements Runnable {
                     System.out.println("Unknown message type: " + type);
                     break;
             }
-        } catch (JSONException | IOException e) {
-            System.err.println("Invalid JSON format received: " + messageIn);
+        } catch (IOException e) {
+            System.err.println("Invalid format received: " + messageIn);
         }
     }
 
@@ -256,10 +255,10 @@ public class ClientHandler implements Runnable {
 
     private void handlePing() throws IOException {
         lastPingTime = System.currentTimeMillis();
-        createJsonMessage(new String[] {"pong"});
+        createMessage(new String[] {"pong"});
     }
 
-    public void broadcastMessage(JSONObject message) {
+    public void broadcastMessage(Protocol message) {
         for (ClientHandler client : lobbies.getOrDefault(currentLobby, new ArrayList<>())) {
             try {
                 if (!client.username.equals(username)) {
@@ -273,8 +272,8 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void sendPrivateMessage(JSONObject message) {
-        String receiver = message.optString("receiver");
+    private void sendPrivateMessage(Protocol message) {
+        String receiver = message.getString("receiver");
         if (receiver.isEmpty()) {
             System.err.println("Receiver username is missing or empty.");
             return;
@@ -299,12 +298,12 @@ public class ClientHandler implements Runnable {
         */
     }
 
-    private void broadcastSystemMessage(String message) {
-        JSONObject jsonMessage = new JSONObject();
-        jsonMessage.put("type", "system");
-        jsonMessage.put("content", message);
-        broadcastMessage(jsonMessage);
-        System.out.println(jsonMessage);
+    private void broadcastSystemMessage(String input) {
+        Protocol message = new Protocol();
+        message.put("type", "system");
+        message.put("content", input);
+        broadcastMessage(message);
+        System.out.println(message);
     }
 
     private void startPingCheckScheduler() {
