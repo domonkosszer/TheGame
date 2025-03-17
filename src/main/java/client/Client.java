@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.Scanner;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -13,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 
 import gui.BaseController;
-import protocol.Protocol;
+import network.Protocol;
 
 public class Client {
     private Socket socket;
@@ -24,7 +25,6 @@ public class Client {
     private long lastPongTime;
     private int pongLatency;
     private volatile boolean isRunning = true;
-    private ScheduledExecutorService pingScheduler;
     private BaseController baseController;
 
     public Client(Socket socket) {
@@ -43,7 +43,7 @@ public class Client {
         this.baseController = baseController;
     }
 
-    public void selectUsername(String userInput) throws IOException {
+    public void selectUsername(String userInput) {
         if (!userInput.equals(this.username)) {
             createMessage(new String[] {"username", userInput});
         }
@@ -53,18 +53,30 @@ public class Client {
         Platform.runLater(() -> baseController.setUsername(suggestedUsername));
     }
 
+    public String getUsername() {
+        return this.username;
+    }
+
+    private void chat(String receiver, String message) {
+        if (receiver == null || message == null) {
+            System.err.println("Error: receiver and message cannot be null");
+        } else if (receiver.equals("DEFAULT")) {
+            createMessage(new String[] {"chat", message});
+        } else if (receiver.equals("BROADCAST")) {
+            createMessage(new String[] {"broadcastChat", message});
+        } else {
+            createMessage(new String[] {"privateChat", receiver, message});
+        }
+    }
+
     public void startPingScheduler() {
-        pingScheduler = Executors.newScheduledThreadPool(1);
+        ScheduledExecutorService pingScheduler = Executors.newScheduledThreadPool(1);
         pingScheduler.scheduleAtFixedRate(this::sendPing, 0, 2, TimeUnit.SECONDS);
     }
 
     private void sendPing() {
-        try {
-            lastPingTime = System.currentTimeMillis();
-            createMessage(new String[] {"ping"});
-        } catch (IOException e) {
-            reconnect();
-        }
+        lastPingTime = System.currentTimeMillis();
+        createMessage(new String[] {"ping"});
     }
 
     private void handlePong() {
@@ -80,37 +92,38 @@ public class Client {
 
     public void quit() {
         isRunning = false;
-        try{
-            createMessage(new String[] {"quit"});
-        } catch (IOException e) {
-            System.err.println("Error sending quit message: " + e.getMessage());
-        }
+        createMessage(new String[] {"quit"});
         closeEverything();
         System.exit(0);
     }
 
-    private void createMessage(String[] input) throws IOException {
+    private void createMessage(String[] input) {
         Protocol protocolMessage = new Protocol();
         String type = input[0];
         protocolMessage.put("type", type);
 
         switch(type) {
-            case "private":
+            case "privateChat":
                 protocolMessage.put("receiver", input[1]);
                 protocolMessage.put("content", input[2]);
                 break;
-            case "username",
-                 "message":
+            case "chat",
+                 "broadcastChat",
+                 "username":
                 protocolMessage.put("content", input[1]);
                 break;
-            case "lobby":
+            case "joinLobby":
                 protocolMessage.put("lobbyName", input[1]);
                 break;
         }
-        out.write(protocolMessage.toString());
-        System.out.println("Sent: " + protocolMessage);
-        out.newLine();
-        out.flush();
+
+        try {
+            out.write(protocolMessage.toString());
+            out.newLine();
+            out.flush();
+        } catch (IOException e) {
+            reconnect();
+        }
     }
 
     public void listenForMessage() {
@@ -118,35 +131,33 @@ public class Client {
             String message;
             try {
                 while ((message = in.readLine()) != null) {
-                    System.out.println("Received: " + message);
                     Protocol protocolMessage = new Protocol(message);
+                    System.out.println("Received: " + protocolMessage);
                     String type = protocolMessage.getString("type");
                     String content = protocolMessage.getString("content");
                     String sender = protocolMessage.getString("sender");
                     switch (type) {
                         case "system":
-                            System.out.println(content);
+                            //System.out.println(content);
                             break;
                         case "suggested username":
                             handleSuggestedUsername(content);
                             break;
                         case "final username":
                             this.username = content;
-                            Platform.runLater(() -> {
-                                baseController.switchScene("/fxml/menu.fxml");
-                            });
+                            Platform.runLater(() -> baseController.switchScene("/fxml/menu.fxml"));
                             break;
                         case "group":
-                            System.out.println(sender + ": " + content);
+                            //System.out.println(sender + ": " + content);
                             break;
                         case "private":
-                            System.out.println("[PRIVATE] " + sender + ": " + content);
+                            //System.out.println("[PRIVATE] " + sender + ": " + content);
                             break;
                         case "pong":
                             handlePong();
                             break;
                         default:
-                            System.out.println("Unknown message type: " + type);
+                            System.err.println("Unknown message type: " + type);
                     }
                 }
             } catch (IOException e) {
@@ -178,7 +189,45 @@ public class Client {
         }
     }
 
-    public String getUsername() {
-        return this.username;
+    public void startScanner() {
+        try (Scanner scanner = new Scanner(System.in)) {
+            while (socket.isConnected()) {
+                System.out.print("> ");
+                String message = scanner.nextLine().trim();
+                if (!message.startsWith("/")) continue;
+                handleCommand(message);
+            }
+        }
+    }
+
+    private void handleCommand(String message) {
+        String command = message.split("\\s+")[0];
+        String input = message.split("\\s+", 2)[1];
+        switch (command) {
+            case "/username":
+                selectUsername(input);
+                break;
+            case "/joinLobby":
+                //joinLobby(input);
+                break;
+            case "/whisper",
+                 "/w":
+                String[] whisper = message.split("\\s+", 3);
+                if (whisper.length == 3) {
+                    String receiver = whisper[1];
+                    chat(receiver, whisper[2]);
+                } else {
+                    System.err.println("Error: Invalid whisper command.");
+                }
+                break;
+            case "/broadcast":
+                chat("BROADCAST", input);
+                break;
+            case "/quit":
+                quit();
+                break;
+            default:
+                chat("DEFAULT", message);
+        }
     }
 }

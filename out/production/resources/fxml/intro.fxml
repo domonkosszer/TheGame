@@ -5,6 +5,6 @@
 
 <StackPane fx:id="root" minHeight="400.0" minWidth="400.0" style="-fx-background-color: transparent;" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="gui.IntroController">
     <ImageView fx:id="imageView" fitHeight="400.0" fitWidth="400.0" pickOnBounds="true" preserveRatio="true" StackPane.alignment="CENTER">
-        <Image url="@../img/intro.png"/>
+        <Image url="@../images/intro.png"/>
     </ImageView>
 </StackPane>

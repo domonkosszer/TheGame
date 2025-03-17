@@ -1,9 +1,11 @@
 package gui;
 
-import javafx.application.Platform;
-import javafx.fxml.FXML;
 import java.io.IOException;
 import java.net.Socket;
+
+import javafx.application.Platform;
+import javafx.fxml.FXML;
+
 import client.Client;
 
 /**
@@ -19,10 +21,17 @@ public class LoginController extends BaseController {
             client = new Client(socket);
             client.setBaseController(this);
             client.listenForMessage();
+            client.startScanner();
             Platform.runLater(() -> sceneController.setClient(client));
         } catch (IOException e) {
             Platform.runLater(() -> client.reconnect());
         }
+
+        usernameField.textProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue != null && newValue.contains(" ")) {
+                usernameField.setText(newValue.replaceAll("\\s+", ""));
+            }
+        });
 
         String systemUsername = System.getProperty("user.name");
         usernameField.setText(systemUsername);
@@ -32,7 +41,7 @@ public class LoginController extends BaseController {
      * Handles the login action.
      */
     @FXML
-    private void handleLogin() throws IOException {
+    private void handleLogin() {
         String username = usernameField.getText().trim();
         if (!username.isEmpty()) {
             client.selectUsername(username);

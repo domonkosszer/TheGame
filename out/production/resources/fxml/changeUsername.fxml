@@ -26,10 +26,10 @@
             </viewport>
             <Image url="@../images/intro.png" />
         </ImageView>
-      <DialogPane GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1" GridPane.valignment="CENTER" GridPane.vgrow="ALWAYS">
+      <DialogPane fx:id="dialogPane" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1" GridPane.valignment="CENTER" GridPane.vgrow="ALWAYS">
          <buttonTypes>
-            <ButtonType fx:constant="APPLY" fx:id="ApplyButton"/>
-            <ButtonType fx:constant="CANCEL" fx:id="CancelButton"/>
+            <ButtonType fx:id="applyButton" fx:constant="APPLY" />
+            <ButtonType fx:id="cancelButton" fx:constant="CANCEL" />
          </buttonTypes>
          <content>
               <VBox alignment="CENTER" spacing="10">

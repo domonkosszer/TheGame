@@ -30,7 +30,7 @@
            <viewport>
                <Rectangle2D />
            </viewport>
-           <Image url="@../img/intro.png" />
+           <Image url="@../images/intro.png" />
        </ImageView>
       <VBox alignment="CENTER" spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="1">
           <Label maxWidth="1.7976931348623157E308" text="Username" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" />

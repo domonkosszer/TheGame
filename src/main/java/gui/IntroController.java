@@ -1,5 +1,8 @@
 package gui;
 
+import java.io.IOException;
+import java.util.Objects;
+
 import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
@@ -10,9 +13,6 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
-
-import java.io.IOException;
-import java.util.Objects;
 
 /**
  * Controller for the intro scene.
