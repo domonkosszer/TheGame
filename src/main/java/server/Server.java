@@ -8,7 +8,7 @@ public class Server {
     private final ServerSocket serverSocket;
 
     public Server(ServerSocket serverSocket) {
-        this.serverSocket = serverSocket;
+        this.serverSocket = serverSocket; // Noncompliant
     }
 
     public void startServer() {
