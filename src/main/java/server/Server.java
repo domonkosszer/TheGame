@@ -21,7 +21,7 @@ public class Server {
                 Thread thread = new Thread(clientHandler);
                 thread.start(); // Noncomplthjjhftz
             }
-        } catch (IOException e) { //wedewde
+        } catch (IOException e) { //wedewdewedwed
             e.printStackTrace(); //wqdwdtzfufuzugwefewfwefeefwefefwas
         }
     }
