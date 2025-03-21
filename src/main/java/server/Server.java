@@ -19,7 +19,7 @@ public class Server {
                 server.ClientHandler clientHandler = new server.ClientHandler(socket);
 
                 Thread thread = new Thread(clientHandler);
-                thread.start();
+                thread.start(); // Noncomplthjjhftz
             }
         } catch (IOException e) {
             e.printStackTrace();
