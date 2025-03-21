@@ -22,7 +22,7 @@ public class Server {
                 thread.start(); // Noncomplthjjhftz
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            e.printStackTrace(); //wqdwd
         }
     }
 
